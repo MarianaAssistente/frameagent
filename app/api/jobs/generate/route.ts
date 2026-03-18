@@ -23,3 +23,4 @@ export async function POST(req: NextRequest) {
   const { data: job } = await db.from("frameagent_jobs").insert({ user_id: user.id, type: TYPE_DB[type]??"image_generation", status:"processing", prompt, model: FAL_MODELS[model]??"fal-ai/flux/schnell", provider:"fal.ai", credits_used:5, metadata:{dimensions:dims,model_name:model} }).select("id").single();
   return NextResponse.json({ job_id: job!.id, fal_key: falKey, fal_model: FAL_MODELS[model]??"fal-ai/flux/schnell", dimensions: dims });
 }
+// cache bust Wed Mar 18 21:56:55 UTC 2026
