@@ -2,14 +2,24 @@
  * /api/jobs
  * POST — Cria novo job de geração de imagem via fal.ai (BYOK)
  * GET  — Lista jobs do usuário
- * PATCH /api/jobs?action=retry&jobId=<id> — Retenta job failed
+ * PATCH — Retenta job failed
+ *
+ * IMPORTANTE: maxDuration = 60 para acomodar chamadas fal.ai (20-60s).
+ * Vercel Hobby: 10s (pode dar timeout) → Vercel Pro: 60s → 300s
  */
+
+// Aumenta timeout do Vercel Serverless para 60s (Vercel Pro/Team)
+export const maxDuration = 60;
 
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { decryptApiKey } from "@/lib/vault";
 import { JobStatus } from "@/lib/redis";
+
+// URL do worker Fly.io para disparo assíncrono (fallback)
+const WORKER_URL    = process.env.WORKER_URL ?? "https://frameagent-worker.fly.dev";
+const WORKER_SECRET = process.env.WORKER_SECRET ?? "frameagent-worker-secret-olimpo-2026";
 
 // ── Modelos suportados ────────────────────────────────────────────────────────
 
@@ -77,32 +87,45 @@ async function markJobFailed(db: ReturnType<typeof supabaseAdmin>, jobId: string
 
 // ── Core: geração de imagem ───────────────────────────────────────────────────
 
-async function generateImage(prompt: string, type: string, model: string, internalUserId: string, db: ReturnType<typeof supabaseAdmin>) {
+async function generateImage(
+  prompt: string,
+  type: string,
+  model: string,
+  internalUserId: string,
+  db: ReturnType<typeof supabaseAdmin>,
+  existingJobId?: string,   // Se já foi criado pelo POST handler
+) {
   const modelConfig = FAL_MODELS[model];
   if (!modelConfig) throw new Error(`Modelo inválido: ${model}`);
 
   const dims   = TYPE_DIMENSIONS[type] ?? TYPE_DIMENSIONS["image"];
   const dbType = TYPE_DB_MAP[type] ?? "image_generation";
 
-  // Criar job como 'processing'
-  const { data: job, error: jobErr } = await db
-    .from("frameagent_jobs")
-    .insert({
-      user_id:      internalUserId,
-      type:         dbType,
-      status:       "processing",
-      prompt,
-      model:        modelConfig.falId,
-      provider:     "fal.ai",
-      credits_used: 5,
-      metadata: { dimensions: dims, model_name: modelConfig.name },
-    })
-    .select("id")
-    .single();
+  let jobId: string;
 
-  if (jobErr || !job) throw new Error(jobErr?.message ?? "Erro ao criar job no banco");
+  if (existingJobId) {
+    jobId = existingJobId;
+  } else {
+    // Criar job como 'processing'
+    const { data: job, error: jobErr } = await db
+      .from("frameagent_jobs")
+      .insert({
+        user_id:      internalUserId,
+        type:         dbType,
+        status:       "processing",
+        prompt,
+        model:        modelConfig.falId,
+        provider:     "fal.ai",
+        credits_used: 5,
+        metadata: { dimensions: dims, model_name: modelConfig.name },
+      })
+      .select("id")
+      .single();
 
-  const jobId = job.id;
+    if (jobErr || !job) throw new Error(jobErr?.message ?? "Erro ao criar job no banco");
+    jobId = job.id;
+  }
+
   await JobStatus.set(jobId, { state: "processing", progress: 10, message: "Enviando para fal.ai..." }).catch(() => {});
 
   // Buscar e decriptar API key fal.ai
@@ -208,6 +231,87 @@ async function generateImage(prompt: string, type: string, model: string, intern
   return { jobId, assetId: asset.id, imageUrl };
 }
 
+// ── Dispara worker Fly.io e aguarda resultado (polling interno) ───────────────
+
+async function dispatchAndWait(
+  jobId: string,
+  clerkUserId: string,
+  prompt: string,
+  type: string,
+  model: string,
+  db: ReturnType<typeof supabaseAdmin>,
+  internalUserId: string,
+): Promise<{ done: boolean; assetId?: string | null; imageUrl?: string; error?: string }> {
+
+  const modelConfig = FAL_MODELS[model]!;
+
+  // Payload que o worker espera
+  const workerPayload = {
+    id:      jobId,
+    userId:  clerkUserId,
+    payload: { prompt, type: TYPE_DB_MAP[type] ?? "image_generation", model: modelConfig.falId },
+  };
+
+  // Disparar worker (fire-and-forget tolerante a falha)
+  let workerTriggered = false;
+  try {
+    const triggerRes = await fetch(`${WORKER_URL}/process`, {
+      method:  "POST",
+      headers: {
+        "Content-Type":    "application/json",
+        "X-Worker-Secret": WORKER_SECRET,
+      },
+      body:   JSON.stringify(workerPayload),
+      signal: AbortSignal.timeout(8_000),
+    });
+    workerTriggered = triggerRes.ok;
+    if (!triggerRes.ok) console.warn("[jobs] worker trigger failed:", triggerRes.status, await triggerRes.text().catch(() => ""));
+  } catch (e) {
+    console.warn("[jobs] worker unreachable, falling back to sync:", e);
+  }
+
+  if (!workerTriggered) {
+    // Worker não respondeu — processar síncronamente como fallback
+    const result = await generateImage(prompt, type, model, internalUserId, db, jobId);
+    if ("error" in result && result.error) return { done: true, error: result.error };
+    return { done: true, assetId: result.assetId, imageUrl: result.imageUrl };
+  }
+
+  // Worker disparado — polling do banco por até 55s
+  const deadline = Date.now() + 55_000;
+  const pollInterval = 2_000;
+
+  while (Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, pollInterval));
+
+    const { data: job } = await db
+      .from("frameagent_jobs")
+      .select("status, output_url, error_message")
+      .eq("id", jobId)
+      .single();
+
+    if (!job) break;
+
+    if (job.status === "done") {
+      // Buscar asset gerado
+      const { data: asset } = await db
+        .from("frameagent_assets")
+        .select("id")
+        .eq("job_id", jobId)
+        .single();
+      return { done: true, assetId: asset?.id ?? null, imageUrl: job.output_url };
+    }
+
+    if (job.status === "failed") {
+      return { done: true, error: job.error_message ?? "Geração falhou" };
+    }
+    // status === "processing" → continua polling
+  }
+
+  // Timeout — job ainda em processing; retorna job_id para o frontend fazer polling
+  return { done: false };
+}
+
 // ── POST /api/jobs ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -229,20 +333,66 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Usuário não encontrado. Faça login novamente." }, { status: 404 });
   if (user.credits < 5) return NextResponse.json({ error: "Créditos insuficientes. Recarregue sua conta.", code: "NO_CREDITS" }, { status: 402 });
 
-  const result = await generateImage(prompt.trim(), type, model, user.id, db);
+  // Verificar key antes de criar job
+  const falKey = await getFalApiKey(db, user.id);
+  if (!falKey) {
+    return NextResponse.json({
+      error: "Nenhuma API key fal.ai configurada. Adicione em Dashboard → API Keys.",
+      code: "NO_FAL_KEY",
+    }, { status: 422 });
+  }
 
-  if ("code" in result && result.code === "NO_FAL_KEY")
-    return NextResponse.json({ error: result.error, code: "NO_FAL_KEY", job_id: result.jobId }, { status: 422 });
+  // Criar job como 'processing' imediatamente
+  const modelConfig = FAL_MODELS[model]!;
+  const dims = TYPE_DIMENSIONS[type] ?? TYPE_DIMENSIONS["image"];
+  const dbType = TYPE_DB_MAP[type] ?? "image_generation";
 
-  if ("error" in result && result.error)
-    return NextResponse.json({ error: result.error, job_id: result.jobId }, { status: 500 });
+  const { data: job, error: jobErr } = await db
+    .from("frameagent_jobs")
+    .insert({
+      user_id:      user.id,
+      type:         dbType,
+      status:       "processing",
+      prompt:       prompt.trim(),
+      model:        modelConfig.falId,
+      provider:     "fal.ai",
+      credits_used: 5,
+      metadata: { dimensions: dims, model_name: modelConfig.name },
+    })
+    .select("id")
+    .single();
+
+  if (jobErr || !job)
+    return NextResponse.json({ error: jobErr?.message ?? "Erro ao criar job" }, { status: 500 });
+
+  // Disparar worker + aguardar até 55s
+  const outcome = await dispatchAndWait(
+    job.id, clerkId, prompt.trim(), type, model, db, user.id,
+  );
+
+  if (!outcome.done) {
+    // Timeout — retorna job_id para frontend fazer polling
+    return NextResponse.json({
+      job_id:   job.id,
+      asset_id: null,
+      status:   "processing",
+      polling:  true,
+      message:  "Geração em andamento. Acompanhe em Jobs.",
+    }, { status: 202 });
+  }
+
+  if (outcome.error) {
+    return NextResponse.json({
+      error:  outcome.error,
+      job_id: job.id,
+    }, { status: 500 });
+  }
 
   return NextResponse.json({
-    job_id:    result.jobId,
-    asset_id:  result.assetId,      // nunca undefined — pode ser null se insert falhou
-    image_url: result.imageUrl,
+    job_id:    job.id,
+    asset_id:  outcome.assetId ?? null,
+    image_url: outcome.imageUrl,
     status:    "done",
-    warning:   (result as any).warning,
   }, { status: 201 });
 }
 

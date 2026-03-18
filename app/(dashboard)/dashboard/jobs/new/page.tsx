@@ -69,9 +69,14 @@ export default function NewJobPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        // Sem key fal.ai configurada — redireciona para setup
         if (data.code === "NO_FAL_KEY") {
-          setError("Nenhuma API key fal.ai configurada.");
+          setError("Nenhuma API key fal.ai configurada. Adicione em API Keys.");
+          setLoading(false);
+          setProgress(null);
+          return;
+        }
+        if (data.code === "NO_CREDITS") {
+          setError("Créditos insuficientes.");
           setLoading(false);
           setProgress(null);
           return;
@@ -79,9 +84,16 @@ export default function NewJobPage() {
         throw new Error(data.error ?? "Erro desconhecido");
       }
 
+      // HTTP 202 — worker em processamento, fazer polling
+      if (res.status === 202 && data.polling) {
+        setProgress("Processando no worker... acompanhe em Jobs.");
+        await new Promise(r => setTimeout(r, 2000));
+        router.push("/dashboard/jobs");
+        return;
+      }
+
       setProgress("Imagem gerada! Redirecionando...");
-      await new Promise(r => setTimeout(r, 800));
-      // asset_id pode ser null se insert falhou — ainda redireciona para assets
+      await new Promise(r => setTimeout(r, 600));
       const newParam = data.asset_id ? `?new=${data.asset_id}` : "";
       router.push(`/dashboard/assets${newParam}`);
     } catch (e: any) {
