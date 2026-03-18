@@ -80,9 +80,10 @@ export default function NewJobPage() {
       }
 
       setProgress("Imagem gerada! Redirecionando...");
-      // Pequena pausa para o usuário ver o feedback
       await new Promise(r => setTimeout(r, 800));
-      router.push(`/dashboard/assets?new=${data.asset_id}`);
+      // asset_id pode ser null se insert falhou — ainda redireciona para assets
+      const newParam = data.asset_id ? `?new=${data.asset_id}` : "";
+      router.push(`/dashboard/assets${newParam}`);
     } catch (e: any) {
       setError(e.message);
       setLoading(false);
