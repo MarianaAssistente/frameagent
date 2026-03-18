@@ -58,43 +58,74 @@ export default function NewJobPage() {
     if (!canSubmit) return;
     setLoading(true);
     setError("");
-    setProgress("Enviando para fal.ai...");
+    setProgress("Preparando geração...");
 
     try {
-      const res = await fetch("/api/jobs", {
+      // 1. Criar job no banco e obter fal key
+      const initRes = await fetch("/api/jobs/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: prompt.trim(), type: jobType, model }),
       });
-      const data = await res.json();
+      const initData = await initRes.json();
 
-      if (!res.ok) {
-        if (data.code === "NO_FAL_KEY") {
+      if (!initRes.ok) {
+        if (initData.code === "NO_FAL_KEY") {
           setError("Nenhuma API key fal.ai configurada. Adicione em API Keys.");
-          setLoading(false);
-          setProgress(null);
-          return;
+          setLoading(false); setProgress(null); return;
         }
-        if (data.code === "NO_CREDITS") {
+        if (initData.code === "NO_CREDITS") {
           setError("Créditos insuficientes.");
-          setLoading(false);
-          setProgress(null);
-          return;
+          setLoading(false); setProgress(null); return;
         }
-        throw new Error(data.error ?? "Erro desconhecido");
+        throw new Error(initData.error ?? "Erro ao criar job");
       }
 
-      // HTTP 202 — worker em processamento, fazer polling
-      if (res.status === 202 && data.polling) {
-        setProgress("Processando no worker... acompanhe em Jobs.");
-        await new Promise(r => setTimeout(r, 2000));
-        router.push("/dashboard/jobs");
-        return;
+      const { job_id, fal_key, fal_model, dimensions } = initData;
+
+      // 2. Chamar fal.ai diretamente do browser (sem timeout Vercel)
+      setProgress("Gerando imagem com fal.ai...");
+      const falRes = await fetch(`https://fal.run/${fal_model}`, {
+        method: "POST",
+        headers: { "Authorization": `Key ${fal_key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: prompt.trim(),
+          image_size: { width: dimensions.w, height: dimensions.h },
+          num_inference_steps: 4,
+          num_images: 1,
+          enable_safety_checker: true,
+          output_format: "jpeg",
+        }),
+      });
+
+      let image_url: string | null = null;
+      let falError: string | null = null;
+
+      if (falRes.ok) {
+        const falData = await falRes.json();
+        image_url = falData?.images?.[0]?.url ?? falData?.image?.url ?? null;
+        if (!image_url) falError = "fal.ai não retornou imagem";
+      } else {
+        const txt = await falRes.text().catch(() => "");
+        falError = `fal.ai ${falRes.status}: ${txt.slice(0, 200)}`;
+      }
+
+      // 3. Salvar resultado no banco
+      setProgress("Salvando resultado...");
+      const completeRes = await fetch("/api/jobs/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ job_id, image_url, error: falError }),
+      });
+      const completeData = await completeRes.json();
+
+      if (falError || !image_url) {
+        throw new Error(falError ?? "Erro na geração");
       }
 
       setProgress("Imagem gerada! Redirecionando...");
       await new Promise(r => setTimeout(r, 600));
-      const newParam = data.asset_id ? `?new=${data.asset_id}` : "";
+      const newParam = completeData.asset_id ? `?new=${completeData.asset_id}` : "";
       router.push(`/dashboard/assets${newParam}`);
     } catch (e: any) {
       setError(e.message);
