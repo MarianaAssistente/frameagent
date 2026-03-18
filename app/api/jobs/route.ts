@@ -20,6 +20,15 @@ const FAL_MODELS: Record<string, { falId: string; name: string; provider: string
   "ideogram-v2":  { falId: "fal-ai/ideogram/v2",        name: "Ideogram V2",             provider: "fal.ai" },
 };
 
+// Mapeia tipo do frontend → valor aceito pelo DB constraint
+const TYPE_DB_MAP: Record<string, string> = {
+  "image":  "image_generation",
+  "post":   "image_generation",
+  "reel":   "reel_compose",
+  "story":  "image_generation",
+  "avatar": "image_generation",
+};
+
 // Aspect ratio por tipo de job
 const TYPE_DIMENSIONS: Record<string, { width: number; height: number; ar: string }> = {
   "image":  { width: 1024, height: 1024, ar: "1:1"   },
@@ -107,11 +116,13 @@ export async function POST(req: NextRequest) {
   const dims = TYPE_DIMENSIONS[type] ?? TYPE_DIMENSIONS["image"];
 
   // Criar job record com status 'processing'
+  const dbType = TYPE_DB_MAP[type] ?? "image_generation";
+
   const { data: job, error: jobErr } = await db
     .from("frameagent_jobs")
     .insert({
       user_id:    internalUserId,
-      type:       `image_${type}`,
+      type:       dbType,
       status:     "processing",
       prompt,
       model:      modelConfig.falId,
