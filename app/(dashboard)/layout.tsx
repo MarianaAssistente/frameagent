@@ -3,11 +3,12 @@ import Link from "next/link";
 import { LayoutDashboard, Cpu, FolderOpen, Key, Settings, Zap } from "lucide-react";
 
 const NAV = [
-  { href:"/dashboard",          icon:<LayoutDashboard size={16}/>, label:"Dashboard"  },
-  { href:"/dashboard/jobs",     icon:<Cpu size={16}/>,             label:"Jobs"       },
-  { href:"/dashboard/assets",   icon:<FolderOpen size={16}/>,      label:"Assets"     },
-  { href:"/dashboard/keys",     icon:<Key size={16}/>,             label:"API Keys"   },
-  { href:"/dashboard/settings", icon:<Settings size={16}/>,        label:"Ajustes"    },
+  { href:"/dashboard",                          icon:<LayoutDashboard size={16}/>, label:"Dashboard"  },
+  { href:"/dashboard/jobs",                     icon:<Cpu size={16}/>,             label:"Jobs"       },
+  { href:"/dashboard/assets",                   icon:<FolderOpen size={16}/>,      label:"Assets"     },
+  { href:"/dashboard/keys",                     icon:<Key size={16}/>,             label:"API Keys"   },
+  { href:"/dashboard/settings/api-keys",        icon:<Key size={16}/>,             label:"BYOK Keys"  },
+  { href:"/dashboard/settings",                 icon:<Settings size={16}/>,        label:"Ajustes"    },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

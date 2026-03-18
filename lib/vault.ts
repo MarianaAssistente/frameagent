@@ -12,7 +12,6 @@ import crypto from "crypto";
 
 const ALGORITHM   = "aes-256-gcm";
 const IV_LENGTH   = 12;   // GCM nonce
-const TAG_LENGTH  = 16;   // auth tag bytes
 const KEY_LENGTH  = 32;   // 256 bits
 
 function getMasterKey(): Buffer {
