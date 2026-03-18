@@ -1,4 +1,4 @@
-// import { UserButton } from "@clerk/nextjs"; // Temporarily disabled — awaiting Clerk keys
+import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { LayoutDashboard, Cpu, FolderOpen, Key, Settings, Zap } from "lucide-react";
 
@@ -32,9 +32,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ))}
         </nav>
 
-        {/* User — placeholder until Clerk keys are configured */}
+        {/* User */}
         <div className="p-4 border-t border-white/8 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-[#C9A84C]/20 flex items-center justify-center text-xs text-[#C9A84C]">U</div>
+          <UserButton appearance={{
+            elements: { avatarBox: "w-8 h-8" }
+          }}/>
           <span className="text-xs text-white/40 truncate">Minha conta</span>
         </div>
       </aside>
