@@ -1,0 +1,202 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Try again",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "back": "Back",
+    "add": "Add",
+    "edit": "Edit",
+    "close": "Close",
+    "search": "Search",
+    "active": "Active",
+    "inactive": "Inactive",
+    "status": "Status",
+    "yes": "Yes",
+    "no": "No",
+    "used": "Used"
+  },
+
+  "nav": {
+    "dashboard": "Dashboard",
+    "jobs": "Jobs",
+    "assets": "Assets",
+    "apiKeys": "API Keys",
+    "byokKeys": "BYOK Keys",
+    "settings": "Settings",
+    "myAccount": "My account"
+  },
+
+  "landing": {
+    "hero": {
+      "badge": "BYOK · Zero API markup",
+      "title": "Create AI content",
+      "titleHighlight": "at scale",
+      "description": "Generate images, videos and avatars with AI using your own keys. Zero markup. Composable pipeline for agents and teams.",
+      "ctaStart": "Start for free",
+      "ctaDemo": "Watch demo"
+    },
+    "features": {
+      "title": "Everything you need",
+      "byok": {
+        "title": "BYOK — Bring your own keys",
+        "desc": "fal.ai, ElevenLabs, Hedra, Gemini, OpenAI, Creatomate. You pay directly."
+      },
+      "pipeline": {
+        "title": "Composable pipeline",
+        "desc": "Chain image → video → narration → final composition in a single job."
+      },
+      "vault": {
+        "title": "AES-256 Vault",
+        "desc": "Keys encrypted with AES-256-GCM. The master key never touches the database."
+      },
+      "scale": {
+        "title": "Multi-agent & teams",
+        "desc": "Multiple users, asset sharing and centralized history."
+      }
+    },
+    "providers": {
+      "title": "Supported providers"
+    },
+    "pricing": {
+      "title": "Simple and transparent",
+      "subtitle": "Pay only for what you use. No surprise monthly fees.",
+      "perJob": "per job",
+      "free": {
+        "name": "Free",
+        "credits": "50 credits",
+        "desc": "To get started",
+        "feature1": "50 free credits",
+        "feature2": "All providers",
+        "feature3": "Assets for 7 days",
+        "cta": "Start for free"
+      },
+      "starter": {
+        "name": "Starter",
+        "price": "$12",
+        "period": "/mo",
+        "credits": "500 credits/mo",
+        "desc": "For creators",
+        "feature1": "500 monthly credits",
+        "feature2": "Assets for 30 days",
+        "feature3": "Normal priority",
+        "cta": "Subscribe Starter"
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "$37",
+        "period": "/mo",
+        "credits": "2000 credits/mo",
+        "desc": "For agencies",
+        "feature1": "2000 monthly credits",
+        "feature2": "Assets for 90 days",
+        "feature3": "High priority",
+        "feature4": "API access",
+        "cta": "Subscribe Pro"
+      }
+    },
+    "cta": {
+      "title": "Ready to create?",
+      "desc": "Start for free, bring your keys and scale when you need.",
+      "button": "Create free account"
+    },
+    "footer": {
+      "tagline": "AI Media Studio — BYOK · Composable Pipeline · AES-256 Vault"
+    }
+  },
+
+  "auth": {
+    "signIn": {
+      "title": "Sign in to your account",
+      "configuring": "Authentication is being configured.",
+      "waiting": "Waiting for authentication keys.",
+      "backLink": "← Back"
+    },
+    "signUp": {
+      "title": "Create your account",
+      "configuring": "Sign up is being configured.",
+      "waiting": "Waiting for authentication keys.",
+      "backLink": "← Back"
+    }
+  },
+
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome to FrameAgent",
+    "subtitle": "Select an option from the menu to get started.",
+    "stats": {
+      "credits": "Credits",
+      "jobs": "Jobs",
+      "assets": "Assets"
+    }
+  },
+
+  "jobs": {
+    "title": "Jobs",
+    "subtitle": "Your content generation jobs.",
+    "empty": "No jobs yet",
+    "emptyDesc": "Create your first image or video generation job.",
+    "status": {
+      "queued": "Queued",
+      "processing": "Processing",
+      "done": "Done",
+      "failed": "Failed"
+    }
+  },
+
+  "assets": {
+    "title": "Assets",
+    "subtitle": "Generated images and videos.",
+    "empty": "No assets yet",
+    "emptyDesc": "Generated assets will appear here."
+  },
+
+  "keys": {
+    "title": "API Keys — BYOK",
+    "subtitle": "Bring your own API keys. You pay directly to the APIs — zero markup. Encrypted with AES-256-GCM before saving.",
+    "add": "Add API Key",
+    "new": "New API Key",
+    "provider": "Provider",
+    "label": "Label",
+    "labelPlaceholder": "ex: personal, production",
+    "keyField": "API Key",
+    "keyEncrypted": "encrypted before saving",
+    "keyOriginalNote": "Original value never stored — only the GCM blob.",
+    "saving": "Saving...",
+    "saveKey": "Save key",
+    "confirmDelete": "Remove key \"{label}\" ({provider})?",
+    "docs": "Documentation",
+    "getKey": "Get key",
+    "configured": "Configured",
+    "activeKeys": "Active Keys",
+    "providers": "Providers",
+    "availableProviders": "Available providers",
+    "vault": {
+      "title": "AES-256-GCM Vault",
+      "desc": "Keys encrypted with a separate master key (VAULT_KEY env var). The original text never touches the database. Only the SHA-256 hash is stored for verification. Cannot be reversed."
+    },
+    "errors": {
+      "duplicate": "A key with this provider and label already exists",
+      "connectionFailed": "Connection failed",
+      "unknown": "Unknown error"
+    }
+  },
+
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Your account settings.",
+    "language": "Language",
+    "apiKeys": {
+      "title": "API Keys — BYOK",
+      "subtitle": "Bring your own keys. You pay directly to the APIs — zero platform markup. All encrypted with AES-256-GCM before persisting.",
+      "breadcrumb": "API Keys",
+      "vault": {
+        "title": "AES-256-GCM Vault active",
+        "desc": "Each key gets a unique IV. The master key (VAULT_KEY) lives only in env vars — never in the database. Only the SHA-256 hash + preview are stored. Reversal is impossible without the master key."
+      }
+    }
+  }
+}

@@ -1,13 +1,16 @@
 import { SignIn } from "@clerk/nextjs";
+import { getTranslations } from "next-intl/server";
 
-export default function SignInPage() {
+export default async function SignInPage() {
+  const t = await getTranslations("auth.signIn");
+
   return (
     <div className="min-h-screen bg-[#09090b] flex items-center justify-center p-6">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <span className="text-3xl">⚡</span>
           <h1 className="text-xl font-bold mt-2">FrameAgent</h1>
-          <p className="text-white/40 text-sm mt-1">Entre na sua conta</p>
+          <p className="text-white/40 text-sm mt-1">{t("title")}</p>
         </div>
         <SignIn
           appearance={{

@@ -1,17 +1,21 @@
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { LayoutDashboard, Cpu, FolderOpen, Key, Settings, Zap } from "lucide-react";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { getTranslations } from "next-intl/server";
 
-const NAV = [
-  { href:"/dashboard",                          icon:<LayoutDashboard size={16}/>, label:"Dashboard"  },
-  { href:"/dashboard/jobs",                     icon:<Cpu size={16}/>,             label:"Jobs"       },
-  { href:"/dashboard/assets",                   icon:<FolderOpen size={16}/>,      label:"Assets"     },
-  { href:"/dashboard/keys",                     icon:<Key size={16}/>,             label:"API Keys"   },
-  { href:"/dashboard/settings/api-keys",        icon:<Key size={16}/>,             label:"BYOK Keys"  },
-  { href:"/dashboard/settings",                 icon:<Settings size={16}/>,        label:"Ajustes"    },
+const NAV_ITEMS = [
+  { href:"/dashboard",                   icon:<LayoutDashboard size={16}/>, key:"dashboard"  },
+  { href:"/dashboard/jobs",              icon:<Cpu size={16}/>,             key:"jobs"       },
+  { href:"/dashboard/assets",            icon:<FolderOpen size={16}/>,      key:"assets"     },
+  { href:"/dashboard/keys",              icon:<Key size={16}/>,             key:"apiKeys"    },
+  { href:"/dashboard/settings/api-keys", icon:<Key size={16}/>,             key:"byokKeys"   },
+  { href:"/dashboard/settings",          icon:<Settings size={16}/>,        key:"settings"   },
 ];
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const t = await getTranslations("nav");
+
   return (
     <div className="flex h-screen bg-[#09090b] overflow-hidden">
       {/* Sidebar */}
@@ -23,22 +27,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 p-3 space-y-1">
-          {NAV.map(item => (
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto" style={{ scrollbarWidth:"thin", scrollbarColor:"rgba(201,168,76,0.2) transparent" }}>
+          {NAV_ITEMS.map(item => (
             <Link key={item.href} href={item.href}
               className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-white/50 hover:text-white hover:bg-white/5 transition-colors">
               <span style={{ color:"inherit" }}>{item.icon}</span>
-              {item.label}
+              {t(item.key as any)}
             </Link>
           ))}
         </nav>
 
-        {/* User */}
-        <div className="p-4 border-t border-white/8 flex items-center gap-3">
-          <UserButton appearance={{
-            elements: { avatarBox: "w-8 h-8" }
-          }}/>
-          <span className="text-xs text-white/40 truncate">Minha conta</span>
+        {/* Footer — User + Language */}
+        <div className="p-4 border-t border-white/8 space-y-3">
+          {/* Language toggle */}
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-white/25 uppercase tracking-wider">Lang</span>
+            <LanguageToggle />
+          </div>
+          {/* User */}
+          <div className="flex items-center gap-3">
+            <UserButton appearance={{ elements: { avatarBox: "w-8 h-8" } }}/>
+            <span className="text-xs text-white/40 truncate">{t("myAccount")}</span>
+          </div>
         </div>
       </aside>
 
