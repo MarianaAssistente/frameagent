@@ -13,6 +13,8 @@ export default async function SignInPage() {
           <p className="text-white/40 text-sm mt-1">{t("title")}</p>
         </div>
         <SignIn
+          forceRedirectUrl="/dashboard"
+          fallbackRedirectUrl="/dashboard"
           appearance={{
             elements: {
               rootBox: "w-full",

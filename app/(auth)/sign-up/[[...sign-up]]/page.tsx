@@ -13,6 +13,8 @@ export default async function SignUpPage() {
           <p className="text-white/40 text-sm mt-1">{t("title")}</p>
         </div>
         <SignUp
+          forceRedirectUrl="/dashboard"
+          fallbackRedirectUrl="/dashboard"
           appearance={{
             elements: {
               rootBox: "w-full",

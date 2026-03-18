@@ -1,29 +1,31 @@
+"use client";
+
 import Link from "next/link";
 import { Zap, Shield, GitBranch, Users, ExternalLink } from "lucide-react";
-import { getTranslations, getLocale } from "next-intl/server";
+import { useTranslations, useLocale } from "next-intl";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { SignInButton, SignUpButton } from "@clerk/nextjs";
 
 const PROVIDERS = [
-  { name:"fal.ai",         icon:"🎬", color:"#9B7EC8", url:"https://fal.ai" },
-  { name:"ElevenLabs",     icon:"🎙️", color:"#F59E0B", url:"https://elevenlabs.io" },
-  { name:"Hedra",          icon:"🎭", color:"#06B6D4", url:"https://hedra.com" },
-  { name:"Gemini",         icon:"✨", color:"#4285F4", url:"https://ai.google.dev" },
-  { name:"OpenAI",         icon:"🤖", color:"#4ADE80", url:"https://openai.com" },
-  { name:"Creatomate",     icon:"🎞️", color:"#C9A84C", url:"https://creatomate.com" },
+  { name:"fal.ai",     icon:"🎬", color:"#9B7EC8", url:"https://fal.ai" },
+  { name:"ElevenLabs", icon:"🎙️", color:"#F59E0B", url:"https://elevenlabs.io" },
+  { name:"Hedra",      icon:"🎭", color:"#06B6D4", url:"https://hedra.com" },
+  { name:"Gemini",     icon:"✨", color:"#4285F4", url:"https://ai.google.dev" },
+  { name:"OpenAI",     icon:"🤖", color:"#4ADE80", url:"https://openai.com" },
+  { name:"Creatomate", icon:"🎞️", color:"#C9A84C", url:"https://creatomate.com" },
 ];
 
 const CREDIT_COSTS = [
   { action:"Geração de imagem / Image generation", credits:5  },
   { action:"Geração de vídeo curto / Short video", credits:20 },
-  { action:"Avatar lip sync",                       credits:30 },
-  { action:"Text-to-speech (por minuto / per min)", credits:8  },
-  { action:"Composição final / Final composition",  credits:15 },
+  { action:"Avatar lip sync",                      credits:30 },
+  { action:"Text-to-speech (por min / per min)",   credits:8  },
+  { action:"Composição final / Final composition", credits:15 },
 ];
 
-export default async function LandingPage() {
-  const t     = await getTranslations("landing");
-  const tc    = await getTranslations("common");
-  const locale = await getLocale();
+export default function LandingPage() {
+  const t      = useTranslations("landing");
+  const locale = useLocale();
 
   return (
     <div className="min-h-screen bg-[#09090b] text-white">
@@ -39,15 +41,19 @@ export default async function LandingPage() {
           </div>
           <div className="flex items-center gap-3">
             <LanguageToggle />
-            <Link href="/sign-in"
-              className="text-sm text-white/60 hover:text-white transition-colors">
-              {locale === "pt" ? "Entrar" : "Sign in"}
-            </Link>
-            <Link href="/sign-up"
-              className="text-sm px-4 py-2 rounded-lg font-semibold transition-all hover:brightness-110"
-              style={{ background:"#C9A84C", color:"#09090b" }}>
-              {t("hero.ctaStart")}
-            </Link>
+            {/* Sign In — força redirect para /dashboard */}
+            <SignInButton forceRedirectUrl="/dashboard" mode="redirect">
+              <button className="text-sm text-white/60 hover:text-white transition-colors">
+                {locale === "pt" ? "Entrar" : "Sign in"}
+              </button>
+            </SignInButton>
+            {/* Sign Up — força redirect para /dashboard */}
+            <SignUpButton forceRedirectUrl="/dashboard" mode="redirect">
+              <button className="text-sm px-4 py-2 rounded-lg font-semibold transition-all hover:brightness-110"
+                style={{ background:"#C9A84C", color:"#09090b" }}>
+                {t("hero.ctaStart")}
+              </button>
+            </SignUpButton>
           </div>
         </div>
       </nav>
@@ -70,15 +76,16 @@ export default async function LandingPage() {
             {t("hero.description")}
           </p>
           <div className="flex items-center justify-center gap-3 flex-wrap">
-            <Link href="/sign-up"
-              className="px-8 py-4 rounded-2xl text-base font-bold transition-all hover:brightness-110 hover:scale-105"
-              style={{ background:"linear-gradient(135deg, #C9A84C, #E8D48B)", color:"#09090b" }}>
-              {t("hero.ctaStart")}
-            </Link>
-            <Link href="#features"
-              className="px-8 py-4 rounded-2xl text-base border border-white/10 hover:border-white/25 transition-colors">
+            <SignUpButton forceRedirectUrl="/dashboard" mode="redirect">
+              <button className="px-8 py-4 rounded-2xl text-base font-bold transition-all hover:brightness-110 hover:scale-105"
+                style={{ background:"linear-gradient(135deg, #C9A84C, #E8D48B)", color:"#09090b" }}>
+                {t("hero.ctaStart")}
+              </button>
+            </SignUpButton>
+            <a href="#features"
+              className="px-8 py-4 rounded-2xl text-base border border-white/10 hover:border-white/25 transition-colors cursor-pointer">
               {t("hero.ctaDemo")}
-            </Link>
+            </a>
           </div>
         </div>
       </section>
@@ -124,12 +131,12 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* Credit costs */}
+      {/* Pricing */}
       <section className="py-20 px-6 border-t border-white/5">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-3">{t("pricing.title")}</h2>
           <p className="text-white/40 text-center mb-12">{t("pricing.subtitle")}</p>
-          <div className="space-y-2">
+          <div className="space-y-2 mb-10">
             {CREDIT_COSTS.map(c => (
               <div key={c.action} className="flex items-center justify-between p-4 rounded-xl border border-white/8">
                 <span className="text-sm text-white/70">{c.action}</span>
@@ -139,9 +146,7 @@ export default async function LandingPage() {
               </div>
             ))}
           </div>
-
-          {/* Plans */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-10">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {(["free","starter","pro"] as const).map((plan, i) => (
               <div key={plan} className={`p-6 rounded-2xl border ${i === 2 ? "border-[#C9A84C]/40 bg-[#C9A84C]/5" : "border-white/8"}`}>
                 <p className="text-xs text-white/40 uppercase tracking-wider mb-1">{t(`pricing.${plan}.name` as any)}</p>
@@ -151,14 +156,15 @@ export default async function LandingPage() {
                 </p>
                 {plan !== "free" && <p className="text-xs text-white/40 mb-4">{t(`pricing.${plan}.credits` as any)}</p>}
                 {plan === "free" && <p className="text-xs text-white/40 mb-4">{t("pricing.free.desc")}</p>}
-                <Link href="/sign-up"
-                  className={`block text-center text-sm font-semibold px-4 py-2.5 rounded-xl transition-all ${
+                <SignUpButton forceRedirectUrl="/dashboard" mode="redirect">
+                  <button className={`w-full text-center text-sm font-semibold px-4 py-2.5 rounded-xl transition-all ${
                     i === 2
                       ? "bg-[#C9A84C] text-[#09090b] hover:brightness-110"
                       : "border border-white/15 hover:border-white/30"
                   }`}>
-                  {t(`pricing.${plan}.cta` as any)}
-                </Link>
+                    {t(`pricing.${plan}.cta` as any)}
+                  </button>
+                </SignUpButton>
               </div>
             ))}
           </div>
@@ -169,11 +175,12 @@ export default async function LandingPage() {
       <section className="py-24 px-6 border-t border-white/5 text-center">
         <h2 className="text-4xl font-black mb-4">{t("cta.title")}</h2>
         <p className="text-white/40 mb-8 max-w-md mx-auto">{t("cta.desc")}</p>
-        <Link href="/sign-up"
-          className="inline-block px-10 py-4 rounded-2xl text-base font-bold transition-all hover:brightness-110 hover:scale-105"
-          style={{ background:"linear-gradient(135deg, #C9A84C, #E8D48B)", color:"#09090b" }}>
-          {t("cta.button")}
-        </Link>
+        <SignUpButton forceRedirectUrl="/dashboard" mode="redirect">
+          <button className="inline-block px-10 py-4 rounded-2xl text-base font-bold transition-all hover:brightness-110 hover:scale-105"
+            style={{ background:"linear-gradient(135deg, #C9A84C, #E8D48B)", color:"#09090b" }}>
+            {t("cta.button")}
+          </button>
+        </SignUpButton>
       </section>
 
       {/* Footer */}
