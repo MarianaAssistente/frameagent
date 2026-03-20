@@ -22,7 +22,7 @@ const SYSTEM_PROMPT_TEMPLATE =
   "6. Return ONLY the improved prompt — no explanations, no \"Here is:\", no quotes\n\n" +
   "Input type context: {type} (adjust style for this format: image=photographic, post=instagram, reel=cinematic vertical, story=vertical social, avatar=portrait)";
 
-const SYSTEM_GEMINI_KEY = process.env.GEMINI_API_KEY ?? "AIzaSyBAgdy71pWjPmx6Od52pu-YhL50m5XfqaU";
+const SYSTEM_GEMINI_KEY = process.env.GEMINI_API_KEY ?? "";
 
 async function getLLMKey(userId: string, provider: string): Promise<string | null> {
   const db = supabaseAdmin();
