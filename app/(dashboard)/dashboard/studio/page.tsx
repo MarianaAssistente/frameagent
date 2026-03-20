@@ -1,5 +1,5 @@
 "use client"
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import { Mic, Film, Loader2, CheckCircle, Download, Wand2, Play, RotateCcw } from "lucide-react"
 
 type Segment = {
@@ -41,39 +41,87 @@ export default function StudioPage() {
   const [finalUrl, setFinalUrl] = useState('')
   const [error, setError] = useState('')
   const [uploading, setUploading] = useState(false)
+  const [uploadStatus, setUploadStatus] = useState('')
   const [uploadedFile, setUploadedFile] = useState<{ name: string; type: string; localUrl: string } | null>(null)
+  const ffmpegRef = useRef<any>(null)
+
+  const extractAudioFromVideo = useCallback(async (file: File): Promise<File> => {
+    setUploadStatus('Extraindo áudio do vídeo...')
+    const { FFmpeg } = await import('@ffmpeg/ffmpeg')
+    const { fetchFile, toBlobURL } = await import('@ffmpeg/util')
+
+    if (!ffmpegRef.current) {
+      const ff = new FFmpeg()
+      // Carregar FFmpeg WASM (versão leve)
+      await ff.load({
+        coreURL: await toBlobURL('https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js', 'text/javascript'),
+        wasmURL: await toBlobURL('https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm', 'application/wasm'),
+      })
+      ffmpegRef.current = ff
+    }
+    const ff = ffmpegRef.current
+    const inputName = 'input' + file.name.slice(file.name.lastIndexOf('.'))
+    const outputName = 'audio.mp3'
+
+    await ff.writeFile(inputName, await fetchFile(file))
+    setUploadStatus('Convertendo para MP3...')
+    await ff.exec(['-i', inputName, '-q:a', '4', '-map', 'a', outputName])
+    const data = await ff.readFile(outputName)
+    const audioBlob = new Blob([data], { type: 'audio/mpeg' })
+    const audioFile = new File([audioBlob], file.name.replace(/\.[^.]+$/, '.mp3'), { type: 'audio/mpeg' })
+    setUploadStatus('Áudio extraído ✓')
+    return audioFile
+  }, [])
+
+  const uploadFile = useCallback(async (file: File): Promise<string> => {
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: file.name, contentType: file.type }),
+    })
+    let data: { error?: string; uploadUrl?: string; publicUrl?: string }
+    try { data = await res.json() } catch { throw new Error(`Erro no servidor (${res.status})`) }
+    if (!res.ok) throw new Error(data.error || 'Falha ao obter URL de upload')
+    if (!data.uploadUrl) throw new Error('URL de upload não retornada')
+
+    setUploadStatus('Enviando arquivo...')
+    const putRes = await fetch(data.uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type },
+      body: file,
+    })
+    if (!putRes.ok) throw new Error(`Falha no upload (${putRes.status})`)
+    return data.publicUrl || ''
+  }, [])
 
   const handleFileUpload = useCallback(async (file: File) => {
     setUploading(true)
     setError('')
+    setUploadStatus('Carregando...')
     // Preview local imediato
     const localUrl = URL.createObjectURL(file)
     setUploadedFile({ name: file.name, type: file.type, localUrl })
     try {
-      // Passo 1: pedir URL pré-assinada (request pequeno, sem arquivo)
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename: file.name, contentType: file.type }),
-      })
-      let data: { error?: string; uploadUrl?: string; publicUrl?: string; provider?: string }
-      try { data = await res.json() } catch { throw new Error(`Erro no servidor (${res.status})`) }
-      if (!res.ok) throw new Error(data.error || 'Falha ao obter URL de upload')
-      if (!data.uploadUrl) throw new Error('URL de upload não retornada')
+      const MAX_INLINE = 11 * 1024 * 1024 // 11MB
+      let fileToUpload = file
 
-      // Passo 2: upload direto do browser para Supabase/R2 (sem passar pelo Vercel)
-      const putRes = await fetch(data.uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type },
-        body: file,
-      })
-      if (!putRes.ok) throw new Error(`Falha no upload para storage (${putRes.status})`)
+      // Se for vídeo OU arquivo grande → extrair/converter áudio automaticamente
+      if (file.type.startsWith('video/') || file.size > MAX_INLINE) {
+        fileToUpload = await extractAudioFromVideo(file)
+        // Atualizar preview com nome do arquivo convertido
+        setUploadedFile({ name: fileToUpload.name, type: fileToUpload.type, localUrl })
+      }
 
-      setMediaUrl(data.publicUrl || '')
+      setUploadStatus('Enviando...')
+      const publicUrl = await uploadFile(fileToUpload)
+      setMediaUrl(publicUrl)
+      setUploadStatus('Carregado ✓')
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Upload failed')
+      setUploadedFile(null)
+      setUploadStatus('')
     } finally { setUploading(false) }
-  }, [])
+  }, [extractAudioFromVideo, uploadFile])
 
   async function handleAnalyze() {
     if (!mediaUrl) return
@@ -192,7 +240,7 @@ export default function StudioPage() {
                 onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload(f) }}
               />
               {uploading ? (
-                <><Loader2 size={32} className="animate-spin text-[#C9A84C] mx-auto mb-2" /><p className="text-sm text-white/50">Fazendo upload...</p></>
+                <><Loader2 size={32} className="animate-spin text-[#C9A84C] mx-auto mb-2" /><p className="text-sm text-white/50">{uploadStatus || 'Processando...'}</p></>
               ) : uploadedFile ? (
                 <div className="space-y-2">
                   {uploadedFile.type.startsWith('video/') ? (
