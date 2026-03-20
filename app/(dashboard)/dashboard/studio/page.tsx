@@ -47,31 +47,49 @@ export default function StudioPage() {
 
   const extractAudioFromVideo = useCallback(async (file: File): Promise<File> => {
     setUploadStatus('Extraindo áudio do vídeo...')
-    const { FFmpeg } = await import('@ffmpeg/ffmpeg')
-    const { fetchFile, toBlobURL } = await import('@ffmpeg/util')
 
-    if (!ffmpegRef.current) {
-      const ff = new FFmpeg()
-      // Carregar FFmpeg WASM (versão leve)
-      await ff.load({
-        coreURL: await toBlobURL('/ffmpeg/ffmpeg-core.js', 'text/javascript'),
-        wasmURL: await toBlobURL('/ffmpeg/ffmpeg-core.wasm', 'application/wasm'),
-      })
-      ffmpegRef.current = ff
+    // Usar Web Audio API nativa — sem dependências externas
+    const arrayBuffer = await file.arrayBuffer()
+    const audioCtx = new AudioContext({ sampleRate: 16000 }) // 16kHz mono — ideal para fala
+    setUploadStatus('Decodificando áudio...')
+    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer)
+    await audioCtx.close()
+
+    setUploadStatus('Convertendo para WAV...')
+    // Mixar para mono e exportar como WAV PCM (16-bit)
+    const numChannels = 1
+    const sampleRate = audioBuffer.sampleRate
+    const numSamples = audioBuffer.length
+    const monoData = new Float32Array(numSamples)
+
+    // Mix de todos os canais para mono
+    for (let c = 0; c < audioBuffer.numberOfChannels; c++) {
+      const channelData = audioBuffer.getChannelData(c)
+      for (let i = 0; i < numSamples; i++) monoData[i] += channelData[i] / audioBuffer.numberOfChannels
     }
-    const ff = ffmpegRef.current
-    const inputName = 'input' + file.name.slice(file.name.lastIndexOf('.'))
-    const outputName = 'audio.mp3'
 
-    await ff.writeFile(inputName, await fetchFile(file))
-    setUploadStatus('Convertendo para MP3...')
-    // 64kbps mono 22kHz — perfeito para fala, resulta em ~1MB por minuto
-    await ff.exec(['-i', inputName, '-map', 'a', '-ac', '1', '-ar', '22050', '-b:a', '64k', outputName])
-    const data = await ff.readFile(outputName)
-    const audioBlob = new Blob([data], { type: 'audio/mpeg' })
-    const audioFile = new File([audioBlob], file.name.replace(/\.[^.]+$/, '.mp3'), { type: 'audio/mpeg' })
-    setUploadStatus('Áudio extraído ✓')
-    return audioFile
+    // Converter Float32 → Int16
+    const int16Data = new Int16Array(numSamples)
+    for (let i = 0; i < numSamples; i++) {
+      int16Data[i] = Math.max(-32768, Math.min(32767, Math.round(monoData[i] * 32767)))
+    }
+
+    // Construir WAV header
+    const wavBuffer = new ArrayBuffer(44 + int16Data.byteLength)
+    const view = new DataView(wavBuffer)
+    const writeStr = (offset: number, s: string) => { for (let i = 0; i < s.length; i++) view.setUint8(offset + i, s.charCodeAt(i)) }
+    writeStr(0, 'RIFF'); view.setUint32(4, 36 + int16Data.byteLength, true)
+    writeStr(8, 'WAVE'); writeStr(12, 'fmt '); view.setUint32(16, 16, true)
+    view.setUint16(20, 1, true); view.setUint16(22, numChannels, true)
+    view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true)
+    view.setUint16(32, 2, true); view.setUint16(34, 16, true)
+    writeStr(36, 'data'); view.setUint32(40, int16Data.byteLength, true)
+    new Int16Array(wavBuffer, 44).set(int16Data)
+
+    const wavBlob = new Blob([wavBuffer], { type: 'audio/wav' })
+    const sizeMB = (wavBlob.size / 1024 / 1024).toFixed(1)
+    setUploadStatus(`Áudio extraído ✓ (${sizeMB}MB)`)
+    return new File([wavBlob], file.name.replace(/\.[^.]+$/, '.wav'), { type: 'audio/wav' })
   }, [])
 
   const uploadFile = useCallback(async (file: File): Promise<string> => {

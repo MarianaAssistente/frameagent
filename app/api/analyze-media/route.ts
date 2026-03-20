@@ -56,7 +56,7 @@ export async function POST(req: Request) {
     if (mediaBytes.length > MAX_INLINE_BYTES) {
       const sizeMB = (mediaBytes.length / 1024 / 1024).toFixed(1)
       return NextResponse.json({
-        error: `Arquivo muito grande (${sizeMB}MB). Para vídeos, converta para MP3 primeiro (reduz de ~17MB para ~2MB). Use: ffmpeg -i video.mp4 -q:a 4 audio.mp3`,
+        error: `Arquivo muito grande (${sizeMB}MB). Limite: ${Math.round(MAX_INLINE_BYTES/1024/1024)}MB. Tente novamente — o sistema extrai o áudio automaticamente.`,
         hint: 'convert_to_audio'
       }, { status: 413 })
     }
