@@ -46,18 +46,31 @@ export default function StudioPage() {
     setUploading(true)
     setError('')
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      // FIX: rota correta é /api/upload (não /api/assets/upload que não existe)
-      const res = await fetch('/api/upload', { method: 'POST', body: formData })
-      let data: { error?: string; url?: string }
+      // Passo 1: obter URL pré-assinada do R2 (sem enviar o arquivo pelo Vercel)
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name, contentType: file.type }),
+      })
+      let data: { error?: string; uploadUrl?: string; publicUrl?: string; _mock?: boolean }
       try {
         data = await res.json()
       } catch {
         throw new Error(`Erro no servidor (${res.status}): resposta inválida`)
       }
-      if (!res.ok) throw new Error(data.error || 'Upload failed')
-      setMediaUrl(data.url || '')
+      if (!res.ok) throw new Error(data.error || 'Falha ao obter URL de upload')
+
+      if (!data._mock) {
+        // Passo 2: upload direto do browser para o R2 (bypass do limite do Vercel)
+        const putRes = await fetch(data.uploadUrl!, {
+          method: 'PUT',
+          headers: { 'Content-Type': file.type },
+          body: file,
+        })
+        if (!putRes.ok) throw new Error(`Falha no upload para storage (${putRes.status})`)
+      }
+
+      setMediaUrl(data.publicUrl || '')
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Upload failed')
     } finally { setUploading(false) }
