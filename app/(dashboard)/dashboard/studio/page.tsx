@@ -65,7 +65,8 @@ export default function StudioPage() {
 
     await ff.writeFile(inputName, await fetchFile(file))
     setUploadStatus('Convertendo para MP3...')
-    await ff.exec(['-i', inputName, '-q:a', '4', '-map', 'a', outputName])
+    // 64kbps mono 22kHz — perfeito para fala, resulta em ~1MB por minuto
+    await ff.exec(['-i', inputName, '-map', 'a', '-ac', '1', '-ar', '22050', '-b:a', '64k', outputName])
     const data = await ff.readFile(outputName)
     const audioBlob = new Blob([data], { type: 'audio/mpeg' })
     const audioFile = new File([audioBlob], file.name.replace(/\.[^.]+$/, '.mp3'), { type: 'audio/mpeg' })

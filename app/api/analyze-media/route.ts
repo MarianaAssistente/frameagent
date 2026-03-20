@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     if (mimeType === 'video/quicktime') mimeType = 'video/mp4'
 
     // Verificar tamanho: Gemini Free suporta até ~15MB inline (base64 aumenta 33%)
-    const MAX_INLINE_BYTES = 11 * 1024 * 1024 // 11MB → ~14.7MB base64, dentro do limite
+    const MAX_INLINE_BYTES = 14 * 1024 * 1024 // 14MB → ~18.7MB base64, dentro do limite Gemini
     if (mediaBytes.length > MAX_INLINE_BYTES) {
       const sizeMB = (mediaBytes.length / 1024 / 1024).toFixed(1)
       return NextResponse.json({
