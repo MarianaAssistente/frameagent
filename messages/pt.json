@@ -19,7 +19,6 @@
     "no": "Não",
     "used": "Usado"
   },
-
   "nav": {
     "dashboard": "Dashboard",
     "jobs": "Jobs",
@@ -27,9 +26,11 @@
     "apiKeys": "API Keys",
     "byokKeys": "BYOK Keys",
     "settings": "Ajustes",
-    "myAccount": "Minha conta"
+    "myAccount": "Minha conta",
+    "editor": "Editor",
+    "video": "Vídeo",
+    "studio": "Studio"
   },
-
   "landing": {
     "hero": {
       "badge": "BYOK · Sem markup de API",
@@ -107,7 +108,6 @@
       "tagline": "AI Media Studio — BYOK · Pipeline composável · AES-256 Vault"
     }
   },
-
   "auth": {
     "signIn": {
       "title": "Entre na sua conta",
@@ -122,7 +122,6 @@
       "backLink": "← Voltar"
     }
   },
-
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Bem-vindo ao FrameAgent",
@@ -133,7 +132,6 @@
       "assets": "Assets"
     }
   },
-
   "jobs": {
     "title": "Jobs",
     "subtitle": "Seus jobs de geração de conteúdo.",
@@ -146,14 +144,12 @@
       "failed": "Falhou"
     }
   },
-
   "assets": {
     "title": "Assets",
     "subtitle": "Imagens e vídeos gerados.",
     "empty": "Nenhum asset ainda",
     "emptyDesc": "Assets gerados aparecerão aqui."
   },
-
   "keys": {
     "title": "API Keys — BYOK",
     "subtitle": "Traga suas próprias API keys. Você paga direto nas APIs — sem markup. Criptografadas com AES-256-GCM antes de salvar.",
@@ -184,7 +180,6 @@
       "unknown": "Erro desconhecido"
     }
   },
-
   "settings": {
     "title": "Ajustes",
     "subtitle": "Configurações da sua conta.",

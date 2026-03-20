@@ -1,12 +1,17 @@
-import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
-import { LayoutDashboard, Cpu, FolderOpen, Key, Settings, Zap } from "lucide-react";
+import Image from "next/image";
+import { LayoutDashboard, Cpu, FolderOpen, Key, Settings, Wand2, Film, Clapperboard } from "lucide-react";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { getTranslations } from "next-intl/server";
+import { SidebarFooter } from "./components/sidebar-footer";
+import { UserButton } from "@clerk/nextjs";
 
 const NAV_ITEMS = [
   { href:"/dashboard",                   icon:<LayoutDashboard size={20}/>, key:"dashboard" },
   { href:"/dashboard/jobs",              icon:<Cpu size={20}/>,             key:"jobs"      },
+  { href:"/dashboard/editor",            icon:<Wand2 size={20}/>,           key:"editor"    },
+  { href:"/dashboard/video",             icon:<Film size={20}/>,            key:"video"     },
+  { href:"/dashboard/studio",            icon:<Clapperboard size={20}/>,    key:"studio"    },
   { href:"/dashboard/assets",            icon:<FolderOpen size={20}/>,      key:"assets"    },
   { href:"/dashboard/keys",              icon:<Key size={20}/>,             key:"apiKeys"   },
   { href:"/dashboard/settings",          icon:<Settings size={20}/>,        key:"settings"  },
@@ -21,9 +26,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
       {/* ── Desktop Sidebar (md+) ─────────────────────────── */}
       <aside className="hidden md:flex w-56 border-r border-white/8 flex-col flex-shrink-0">
         {/* Logo */}
-        <div className="flex items-center gap-2 px-5 py-5 border-b border-white/8">
-          <Zap size={18} style={{ color:"#C9A84C" }}/>
-          <span className="font-bold text-sm">FrameAgent</span>
+        <div className="flex items-center px-4 py-4 border-b border-white/8">
+          <Image src="/logo.png" alt="FrameAgent" width={140} height={38} className="object-contain" />
         </div>
 
         {/* Nav */}
@@ -45,14 +49,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
         {/* Footer — User + Language */}
         <div className="p-4 border-t border-white/8 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] text-white/25 uppercase tracking-wider">Lang</span>
+          <div className="flex justify-end">
             <LanguageToggle />
           </div>
-          <div className="flex items-center gap-3">
-            <UserButton appearance={{ elements: { avatarBox: "w-8 h-8" } }}/>
-            <span className="text-xs text-white/40 truncate">{t("myAccount")}</span>
-          </div>
+          <SidebarFooter myAccountLabel={t("myAccount")} />
         </div>
       </aside>
 
@@ -60,10 +60,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile top bar */}
         <header className="md:hidden flex items-center justify-between px-4 py-3 border-b border-white/8 bg-[#09090b] flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <Zap size={16} style={{ color:"#C9A84C" }}/>
-            <span className="font-bold text-sm">FrameAgent</span>
-          </div>
+          <Image src="/logo.png" alt="FrameAgent" width={110} height={30} className="object-contain" />
           <div className="flex items-center gap-2">
             <LanguageToggle />
             <UserButton appearance={{ elements: { avatarBox: "w-8 h-8" } }}/>

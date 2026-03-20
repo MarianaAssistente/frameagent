@@ -107,3 +107,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e.message ?? "Erro interno" }, { status: 500 });
   }
 }
+
+export async function GET(req: NextRequest) {
+  try {
+    const { userId: clerkId } = await auth();
+    if (!clerkId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+    const { data: user } = await db
+      .from("frameagent_users")
+      .select("id")
+      .eq("clerk_user_id", clerkId)
+      .single();
+    if (!user) return NextResponse.json({ jobs: [] });
+
+    const { data: jobs, error } = await db
+      .from("frameagent_jobs")
+      .select("id, type, status, prompt, result_url, error, created_at, credits_used")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ jobs: jobs ?? [] });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
