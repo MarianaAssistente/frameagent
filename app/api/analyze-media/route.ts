@@ -32,9 +32,23 @@ export async function POST(req: Request) {
   let geminiFileUri = ''
   try {
     const mediaRes = await fetch(media_url)
+    if (!mediaRes.ok) return NextResponse.json({ error: `Falha ao baixar mídia: ${mediaRes.status}` }, { status: 500 })
     const mediaBuffer = await mediaRes.arrayBuffer()
     const mediaBytes = Buffer.from(mediaBuffer)
-    const mimeType = mediaRes.headers.get('content-type') || 'audio/mpeg'
+
+    // Detectar mime-type pela URL se o header não for confiável
+    const urlPath = media_url.split('?')[0].toLowerCase()
+    let mimeType = mediaRes.headers.get('content-type') || ''
+    if (!mimeType || mimeType === 'application/octet-stream' || mimeType.includes('text/')) {
+      if (urlPath.endsWith('.mp4') || urlPath.endsWith('.mov')) mimeType = 'video/mp4'
+      else if (urlPath.endsWith('.mp3')) mimeType = 'audio/mpeg'
+      else if (urlPath.endsWith('.wav')) mimeType = 'audio/wav'
+      else if (urlPath.endsWith('.ogg')) mimeType = 'audio/ogg'
+      else if (urlPath.endsWith('.webm')) mimeType = 'video/webm'
+      else mimeType = 'audio/mpeg'
+    }
+    // Normalizar video/quicktime → video/mp4
+    if (mimeType === 'video/quicktime') mimeType = 'video/mp4'
 
     const uploadRes = await fetch(
       `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${geminiKey}`,
@@ -49,14 +63,15 @@ export async function POST(req: Request) {
         body: mediaBytes,
       }
     )
-    const uploadData = await uploadRes.json() as { file?: { uri: string } }
+    const uploadData = await uploadRes.json() as { file?: { uri: string }; error?: { message: string } }
+    if (uploadData?.error) return NextResponse.json({ error: `Gemini upload error: ${uploadData.error.message}` }, { status: 500 })
     geminiFileUri = uploadData?.file?.uri || ''
   } catch (e) {
-    return NextResponse.json({ error: 'Failed to upload media to Gemini', detail: String(e) }, { status: 500 })
+    return NextResponse.json({ error: 'Falha ao enviar mídia ao Gemini', detail: String(e) }, { status: 500 })
   }
 
   if (!geminiFileUri) {
-    return NextResponse.json({ error: 'Gemini file upload failed' }, { status: 500 })
+    return NextResponse.json({ error: 'Gemini não retornou URI do arquivo' }, { status: 500 })
   }
 
   const systemPrompt = `You are a professional video editor AI. Analyze this audio/video content and create a B-roll script.
@@ -103,14 +118,14 @@ Return ONLY valid JSON, no markdown, no explanation:
 
   try {
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${geminiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{
             parts: [
-              { file_data: { mime_type: 'audio/mpeg', file_uri: geminiFileUri } },
+              { file_data: { file_uri: geminiFileUri } },
               { text: systemPrompt }
             ]
           }],

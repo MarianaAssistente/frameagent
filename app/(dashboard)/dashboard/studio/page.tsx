@@ -41,10 +41,14 @@ export default function StudioPage() {
   const [finalUrl, setFinalUrl] = useState('')
   const [error, setError] = useState('')
   const [uploading, setUploading] = useState(false)
+  const [uploadedFile, setUploadedFile] = useState<{ name: string; type: string; localUrl: string } | null>(null)
 
   const handleFileUpload = useCallback(async (file: File) => {
     setUploading(true)
     setError('')
+    // Preview local imediato
+    const localUrl = URL.createObjectURL(file)
+    setUploadedFile({ name: file.name, type: file.type, localUrl })
     try {
       // Passo 1: pedir URL pré-assinada (request pequeno, sem arquivo)
       const res = await fetch('/api/upload', {
@@ -186,8 +190,19 @@ export default function StudioPage() {
               />
               {uploading ? (
                 <><Loader2 size={32} className="animate-spin text-[#C9A84C] mx-auto mb-2" /><p className="text-sm text-white/50">Fazendo upload...</p></>
-              ) : mediaUrl ? (
-                <><CheckCircle size={32} className="text-green-400 mx-auto mb-2" /><p className="text-sm text-green-400">Arquivo carregado ✓</p><p className="text-xs text-white/30 mt-1">Clique para trocar</p></>
+              ) : uploadedFile ? (
+                <div className="space-y-2">
+                  {uploadedFile.type.startsWith('video/') ? (
+                    <video src={uploadedFile.localUrl} className="w-full max-h-40 rounded-lg object-cover mx-auto" muted playsInline />
+                  ) : (
+                    <div className="flex items-center justify-center gap-2">
+                      <CheckCircle size={24} className="text-green-400" />
+                      <span className="text-sm text-green-400 font-medium">Arquivo carregado ✓</span>
+                    </div>
+                  )}
+                  <p className="text-xs text-white/40 truncate text-center">{uploadedFile.name}</p>
+                  <p className="text-xs text-white/25 text-center">Clique para trocar</p>
+                </div>
               ) : (
                 <>
                   <Mic size={32} className="text-white/20 mx-auto mb-3" />
