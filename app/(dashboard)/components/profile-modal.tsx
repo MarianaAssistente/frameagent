@@ -59,7 +59,7 @@ export function ProfileModal({ open, onClose, initialName, initialAvatar }: Prof
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+    <Dialog open={open} onOpenChange={(v: boolean) => !v && onClose()}>
       <DialogContent className="bg-[#111] border-white/10 text-white max-w-md">
         <DialogHeader>
           <DialogTitle className="text-white">Meu Perfil</DialogTitle>
