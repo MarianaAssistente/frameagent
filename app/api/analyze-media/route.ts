@@ -106,7 +106,7 @@ Required JSON structure (respond ONLY with this, nothing else):
     const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
 
     if (!rawText) {
-      const reason = geminiData?.candidates?.[0]?.finishReason || 'unknown'
+      const reason = (geminiData?.candidates?.[0] as any)?.finishReason || 'unknown'
       return NextResponse.json({ error: `Gemini não retornou texto. Motivo: ${reason}` }, { status: 500 })
     }
 
