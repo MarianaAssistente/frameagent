@@ -51,6 +51,16 @@ export async function POST(req: Request) {
     }
     if (mimeType === 'video/quicktime') mimeType = 'video/mp4'
 
+    // Verificar tamanho: Gemini Free suporta até ~15MB inline (base64 aumenta 33%)
+    const MAX_INLINE_BYTES = 11 * 1024 * 1024 // 11MB → ~14.7MB base64, dentro do limite
+    if (mediaBytes.length > MAX_INLINE_BYTES) {
+      const sizeMB = (mediaBytes.length / 1024 / 1024).toFixed(1)
+      return NextResponse.json({
+        error: `Arquivo muito grande (${sizeMB}MB). Para vídeos, converta para MP3 primeiro (reduz de ~17MB para ~2MB). Use: ffmpeg -i video.mp4 -q:a 4 audio.mp3`,
+        hint: 'convert_to_audio'
+      }, { status: 413 })
+    }
+
     mediaBase64 = mediaBytes.toString('base64')
   } catch (e) {
     return NextResponse.json({ error: 'Falha ao baixar mídia', detail: String(e) }, { status: 500 })
@@ -107,6 +117,11 @@ Required JSON structure (respond ONLY with this, nothing else):
 
     if (!rawText) {
       const reason = (geminiData?.candidates?.[0] as any)?.finishReason || 'unknown'
+      const blocked = (geminiData as any)?.promptFeedback?.blockReason
+      if (blocked) return NextResponse.json({ error: `Conteúdo bloqueado pelo Gemini: ${blocked}` }, { status: 500 })
+      if (reason === 'MAX_TOKENS' || reason === 'unknown') {
+        return NextResponse.json({ error: 'Arquivo muito grande para análise gratuita. Use um arquivo MP3 menor (até 8MB) ou converta o vídeo para MP3 antes de enviar.' }, { status: 500 })
+      }
       return NextResponse.json({ error: `Gemini não retornou texto. Motivo: ${reason}` }, { status: 500 })
     }
 

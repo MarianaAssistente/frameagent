@@ -86,6 +86,9 @@ export default function StudioPage() {
         body: JSON.stringify({ media_url: mediaUrl, aspect_ratio: aspectRatio, style }),
       })
       const data = await res.json()
+      if (res.status === 413 || data.hint === 'convert_to_audio') {
+        throw new Error('Vídeo muito grande para análise direta. Extraia o áudio em MP3 primeiro:\nffmpeg -i video.mp4 -q:a 4 audio.mp3\nOu use um arquivo de áudio MP3/WAV menor que 10MB.')
+      }
       if (!res.ok) throw new Error(data.error || 'Análise falhou')
       setAnalysis(data)
       setSegments(data.segments.map((s: Segment) => ({ ...s, broll_url: '', generating: false, generated: false })))
