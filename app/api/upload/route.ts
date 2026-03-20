@@ -56,13 +56,6 @@ export async function POST(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   );
 
-  // Garantir que o bucket existe
-  const { error: bucketError } = await supabase.storage.createBucket("frameagent-uploads", {
-    public: true,
-    fileSizeLimit: 209715200, // 200MB
-  });
-  // ignora erro se bucket já existe
-
   // Gerar URL pré-assinada de upload (válida por 1h)
   const { data: signedData, error: signedError } = await supabase.storage
     .from("frameagent-uploads")

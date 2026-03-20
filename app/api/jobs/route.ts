@@ -123,7 +123,7 @@ export async function GET(req: NextRequest) {
 
     const { data: jobs, error } = await db
       .from("frameagent_jobs")
-      .select("id, type, status, prompt, result_url, error, created_at, credits_used")
+      .select("id, type, status, prompt, result_url, output_url, error_message, created_at, credits_used, model, operation")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(50);
