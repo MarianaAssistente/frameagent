@@ -56,34 +56,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Falha ao baixar mídia', detail: String(e) }, { status: 500 })
   }
 
-  const systemPrompt = `You are a professional video editor AI. Analyze this audio/video content and create a B-roll script.
+  const systemPrompt = `You are a professional video editor AI. Analyze this audio/video and create a B-roll script.
 
-Your task:
-1. Transcribe the speech content
-2. Divide it into segments of 3-8 seconds each
-3. For each segment, suggest a B-roll clip that visually illustrates the narration
-4. The B-roll prompts must be in English, detailed and cinematic
-5. Format the output as valid JSON only
+IMPORTANT: Respond with ONLY raw JSON. No markdown, no backticks, no explanation. Start your response with { and end with }.
 
-Aspect ratio: ${aspect_ratio}
-Style: ${style}
-Original language: ${language}
+Tasks:
+1. Transcribe ALL speech
+2. Split into segments of 3-8 seconds
+3. For each segment write a detailed English B-roll prompt
 
-Return ONLY valid JSON, no markdown, no explanation:
-{
-  "transcript": "full transcription here",
-  "duration_estimate": 30,
-  "segments": [
-    {
-      "index": 0,
-      "start": 0,
-      "end": 5,
-      "narration": "exact words spoken in this segment",
-      "broll_prompt": "detailed English prompt for B-roll clip — include camera angle, lighting, movement, subject, atmosphere",
-      "broll_duration": 5
-    }
-  ]
-}`
+Aspect ratio: ${aspect_ratio} | Style: ${style}
+
+Required JSON structure (respond ONLY with this, nothing else):
+{"transcript":"full text here","duration_estimate":30,"segments":[{"index":0,"start":0,"end":5,"narration":"words spoken","broll_prompt":"cinematic English prompt with camera angle lighting movement","broll_duration":5}]}`
 
   let analysisResult: {
     transcript: string
@@ -120,16 +105,32 @@ Return ONLY valid JSON, no markdown, no explanation:
     }
     const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
 
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/)
+    if (!rawText) {
+      const reason = geminiData?.candidates?.[0]?.finishReason || 'unknown'
+      return NextResponse.json({ error: `Gemini não retornou texto. Motivo: ${reason}` }, { status: 500 })
+    }
+
+    // Tentar extrair JSON de diferentes formatos de resposta
+    let jsonStr = rawText.trim()
+    // Remover markdown code blocks se existirem
+    jsonStr = jsonStr.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '')
+    // Extrair o objeto JSON da resposta
+    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/)
     if (jsonMatch) {
-      analysisResult = JSON.parse(jsonMatch[0])
+      try {
+        analysisResult = JSON.parse(jsonMatch[0])
+      } catch {
+        // Tentar limpar e parsear novamente
+        const cleaned = jsonMatch[0].replace(/[\x00-\x1F\x7F]/g, ' ')
+        analysisResult = JSON.parse(cleaned)
+      }
     }
   } catch (e) {
     return NextResponse.json({ error: 'Gemini analysis failed', detail: String(e) }, { status: 500 })
   }
 
-  if (!analysisResult) {
-    return NextResponse.json({ error: 'Failed to parse analysis result' }, { status: 500 })
+  if (!analysisResult || !analysisResult.segments?.length) {
+    return NextResponse.json({ error: 'Não foi possível gerar o roteiro. Tente com um arquivo de áudio MP3 para melhor resultado.' }, { status: 500 })
   }
 
   await db.from('frameagent_users').update({ credits: user.credits - COST }).eq('id', user.id)
