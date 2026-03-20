@@ -46,31 +46,34 @@ export default function StudioPage() {
     setUploading(true)
     setError('')
     try {
-      // Passo 1: obter URL pré-assinada do R2 (sem enviar o arquivo pelo Vercel)
-      const res = await fetch('/api/upload', {
+      // Tenta primeiro via JSON (presigned URL do R2 se configurado)
+      const jsonRes = await fetch('/api/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filename: file.name, contentType: file.type }),
       })
-      let data: { error?: string; uploadUrl?: string; publicUrl?: string; _mock?: boolean }
-      try {
-        data = await res.json()
-      } catch {
-        throw new Error(`Erro no servidor (${res.status}): resposta inválida`)
-      }
-      if (!res.ok) throw new Error(data.error || 'Falha ao obter URL de upload')
+      let jsonData: { error?: string; uploadUrl?: string; publicUrl?: string; useFormData?: boolean; _mock?: boolean }
+      try { jsonData = await jsonRes.json() } catch { jsonData = { useFormData: true } }
 
-      if (!data._mock) {
-        // Passo 2: upload direto do browser para o R2 (bypass do limite do Vercel)
-        const putRes = await fetch(data.uploadUrl!, {
+      if (jsonData.uploadUrl && !jsonData._mock) {
+        // R2 configurado: upload direto do browser para o R2
+        const putRes = await fetch(jsonData.uploadUrl, {
           method: 'PUT',
           headers: { 'Content-Type': file.type },
           body: file,
         })
         if (!putRes.ok) throw new Error(`Falha no upload para storage (${putRes.status})`)
+        setMediaUrl(jsonData.publicUrl || '')
+      } else {
+        // Fallback: upload via FormData para Supabase Storage
+        const formData = new FormData()
+        formData.append('file', file)
+        const res = await fetch('/api/upload', { method: 'POST', body: formData })
+        let data: { error?: string; url?: string }
+        try { data = await res.json() } catch { throw new Error(`Erro no servidor (${res.status})`) }
+        if (!res.ok) throw new Error(data.error || 'Upload failed')
+        setMediaUrl(data.url || '')
       }
-
-      setMediaUrl(data.publicUrl || '')
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Upload failed')
     } finally { setUploading(false) }
