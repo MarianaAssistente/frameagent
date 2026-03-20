@@ -133,7 +133,8 @@ export default function StudioPage() {
 
       setUploadStatus('Enviando...')
       const publicUrl = await uploadFile(fileToUpload)
-      setMediaUrl(publicUrl)
+      setMediaUrl('') // limpar URL antiga primeiro
+      setTimeout(() => setMediaUrl(publicUrl), 10) // forçar re-render com nova URL
       setUploadStatus('Carregado ✓')
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Upload failed')
@@ -286,10 +287,11 @@ export default function StudioPage() {
               <label className="text-xs text-white/40 mb-1 block">Ou cole uma URL de áudio/vídeo</label>
               <input
                 type="url"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C] placeholder:text-white/20"
+                className={`w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-[#C9A84C] placeholder:text-white/20 ${uploadedFile ? 'opacity-50 cursor-not-allowed' : ''}`}
                 placeholder="https://..."
                 value={mediaUrl}
-                onChange={e => setMediaUrl(e.target.value)}
+                readOnly={!!uploadedFile}
+                onChange={e => !uploadedFile && setMediaUrl(e.target.value)}
               />
             </div>
 
