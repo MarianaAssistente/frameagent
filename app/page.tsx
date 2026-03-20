@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Zap, Shield, GitBranch, Users, ExternalLink } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { LanguageToggle } from "@/components/LanguageToggle";
@@ -34,8 +35,7 @@ export default function LandingPage() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#09090b]/90 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Zap size={18} style={{ color:"#C9A84C" }}/>
-            <span className="font-bold text-base">FrameAgent</span>
+            <Image src="/logo.png" alt="FrameAgent" width={110} height={30} className="object-contain" priority />
             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#C9A84C]/10 text-[#C9A84C] border border-[#C9A84C]/20 ml-1">
               BETA
             </span>
@@ -60,6 +60,10 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="pt-28 pb-16 px-4 md:pt-40 md:pb-24 md:px-6">
         <div className="max-w-4xl mx-auto text-center">
+          {/* Logo centralizada */}
+          <div className="flex justify-center mb-8">
+            <Image src="/logo.png" alt="FrameAgent" width={220} height={120} className="object-contain" priority />
+          </div>
           <div className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-[#C9A84C]/20 bg-[#C9A84C]/5 text-[#C9A84C] text-sm font-medium mb-5 md:mb-6">
             <Zap size={12}/>
             {t("hero.badge")}
