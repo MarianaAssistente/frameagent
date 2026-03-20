@@ -46,34 +46,26 @@ export default function StudioPage() {
     setUploading(true)
     setError('')
     try {
-      // Tenta primeiro via JSON (presigned URL do R2 se configurado)
-      const jsonRes = await fetch('/api/upload', {
+      // Passo 1: pedir URL pré-assinada (request pequeno, sem arquivo)
+      const res = await fetch('/api/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filename: file.name, contentType: file.type }),
       })
-      let jsonData: { error?: string; uploadUrl?: string; publicUrl?: string; useFormData?: boolean; _mock?: boolean }
-      try { jsonData = await jsonRes.json() } catch { jsonData = { useFormData: true } }
+      let data: { error?: string; uploadUrl?: string; publicUrl?: string; provider?: string }
+      try { data = await res.json() } catch { throw new Error(`Erro no servidor (${res.status})`) }
+      if (!res.ok) throw new Error(data.error || 'Falha ao obter URL de upload')
+      if (!data.uploadUrl) throw new Error('URL de upload não retornada')
 
-      if (jsonData.uploadUrl && !jsonData._mock) {
-        // R2 configurado: upload direto do browser para o R2
-        const putRes = await fetch(jsonData.uploadUrl, {
-          method: 'PUT',
-          headers: { 'Content-Type': file.type },
-          body: file,
-        })
-        if (!putRes.ok) throw new Error(`Falha no upload para storage (${putRes.status})`)
-        setMediaUrl(jsonData.publicUrl || '')
-      } else {
-        // Fallback: upload via FormData para Supabase Storage
-        const formData = new FormData()
-        formData.append('file', file)
-        const res = await fetch('/api/upload', { method: 'POST', body: formData })
-        let data: { error?: string; url?: string }
-        try { data = await res.json() } catch { throw new Error(`Erro no servidor (${res.status})`) }
-        if (!res.ok) throw new Error(data.error || 'Upload failed')
-        setMediaUrl(data.url || '')
-      }
+      // Passo 2: upload direto do browser para Supabase/R2 (sem passar pelo Vercel)
+      const putRes = await fetch(data.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      })
+      if (!putRes.ok) throw new Error(`Falha no upload para storage (${putRes.status})`)
+
+      setMediaUrl(data.publicUrl || '')
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Upload failed')
     } finally { setUploading(false) }
