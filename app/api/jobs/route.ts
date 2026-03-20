@@ -2,7 +2,7 @@
  * POST /api/jobs — Edge runtime, sem timeout de 10s
  * Chama fal.ai server-side e retorna resultado
  */
-export const runtime = "edge";
+// export const runtime = "edge"; // removido: edge runtime não suporta 'crypto' node module
 export const maxDuration = 60;
 
 import { NextRequest, NextResponse } from "next/server";
